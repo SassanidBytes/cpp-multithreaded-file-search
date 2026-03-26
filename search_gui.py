@@ -116,6 +116,33 @@ class SearchWorker(QThread):
                 self.output_received.emit(line)
 
 
+    def handle_error(self):
+            """Fehlerausgaben des C++-Programms werden hier abgefangen."""
+            data = self.process.readAllStandardError().data().decode('utf-8', errors='ignore')
+            if data.strip():
+                self.output_received.emit("STDERR: " + data.strip())
+
+        def stop(self):
+            """Wird aufgerufen, wenn der Benutzer abbrechen will."""
+            if self.process and self.process.state() == QProcess.ProcessState.Running:
+                self.process.kill()   # hartes Beenden – reicht für mein Tool
+
+
+    class MainWindow(QMainWindow):
+        """Das Hauptfenster der GUI."""
+
+            def __init__(self):
+            super().__init__()
+            self.setWindowTitle("TextSearch")
+            self.resize(1000, 700)
+
+            self.worker = None      # wird später der SearchWorker
+            self.results = []       # hier speicher ich die gefundenen Zeilen (für die Zählung)
+
+            self.init_ui()
+
+
+
 
 
 
