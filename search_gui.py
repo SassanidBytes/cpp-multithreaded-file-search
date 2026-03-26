@@ -77,9 +77,9 @@ class SearchWorker(QThread):
             self.output_received.emit(f"Fehler beim Ausführen: {e}")
 
     
-#--------------------------------------------------#
-# Ausgabe des C++-Programms wird verarbeitet
-#--------------------------------------------------#
+    	#--------------------------------------------------#
+        # Ausgabe des C++-Programms wird verarbeitet
+        #--------------------------------------------------#
 
     
     def handle_output(self):
@@ -217,7 +217,121 @@ class SearchWorker(QThread):
                 margin: 0.5px;
             }
         """)
-    
+
+
+
+        #--------------------------------------------------#
+        # Fortschrittsbalken wird hinzugefügt
+        #--------------------------------------------------#
+
+
+
+        layout.addWidget(self.progress_bar)
+
+        # === Ergebnisbereich ===
+        result_group = QGroupBox("Suchergebnisse")
+        result_layout = QVBoxLayout()
+
+        self.result_text = QTextEdit()
+        self.result_text.setReadOnly(True)
+        self.result_text.setFont(QFont("Consolas", 10))   # Monospace für bessere Lesbarkeit
+
+        result_layout.addWidget(self.result_text)
+        result_group.setLayout(result_layout)
+        layout.addWidget(result_group, 1)  # 1 = streckt sich, wenn Fenster vergrößert wird
+
+        # Statuszeile unten
+        self.statusBar().showMessage("Bereit - C++-Suchprogramm mit Qt6 GUI")
+
+    def browse_folder(self):
+        """Öffnet einen Dialog, um einen Ordner auszuwählen."""
+        folder = QFileDialog.getExistingDirectory(
+            self, "Ordner auswählen", "", QFileDialog.Option.ShowDirsOnly
+        )
+        if folder:
+            self.folder_edit.setText(folder)
+
+    def start_search(self):
+        """Wird geklickt oder Enter gedrückt – startet die Suche."""
+        word = self.word_edit.text().strip()
+        folder = self.folder_edit.text().strip()
+
+        # Eingaben prüfen
+        if not word:
+            QMessageBox.warning(self, "Fehler", "Bitte einen Suchbegriff eingeben!")
+            return
+        if not folder or not Path(folder).exists():
+            QMessageBox.warning(self, "Fehler", "Bitte einen gültigen Ordner auswählen!")
+            return
+
+        # Alte Ergebnisse zurücksetzen
+        self.result_text.clear()
+        self.results.clear()
+        self.progress_bar.setValue(0)
+
+        # Buttons umschalten
+        self.start_btn.setEnabled(False)
+        self.stop_btn.setEnabled(True)
+
+        self.statusBar().showMessage(f"Suche nach '{word}' in {folder}...")
+
+        # Worker erzeugen und Signale verbinden
+        self.worker = SearchWorker(word, folder, self.threads_spin.value())
+        self.worker.output_received.connect(self.handle_output)
+        self.worker.progress_received.connect(self.progress_bar.setValue)
+        self.worker.finished_signal.connect(self.search_finished)
+
+        self.worker.start()   # startet die run()-Methode im eigenen Thread
+
+    def stop_search(self):
+        """Bricht die laufende Suche ab."""
+        if self.worker and self.worker.isRunning():
+            self.worker.stop()
+            self.statusBar().showMessage("Suche wird abgebrochen...")
+
+    def handle_output(self, line: str):
+        """
+        Verarbeitet die Ausgabe des C++-Programms.
+        Bei FOUND:-Zeilen wird ein hübsch formatierter Eintrag erzeugt.
+        """
+        if line.startswith("FOUND:"):
+            # Format meines C++-Programms: "FOUND:dateipfad|zeilennummer|zeile"
+            try:
+                _, path_line_text = line.split(":", 1)
+                path, lineno, text = path_line_text.strip().split("|", 2)
+                display = f"📄 {path}  |  Zeile {lineno}\n   → {text.strip()}\n"
+                self.result_text.append(display)
+                self.results.append(line)   # für die Zählung am Ende
+            except:
+                # Falls das Parsen schiefgeht, zeige die Rohzeile an
+                self.result_text.append(line)
+        else:
+            self.result_text.append(line)
+
+        # Automatisch nach unten scrollen
+        self.result_text.verticalScrollBar().setValue(
+            self.result_text.verticalScrollBar().maximum()
+        )
+
+    def search_finished(self, seconds: float, threads: int):
+        """Wird aufgerufen, wenn die Suche beendet ist (erfolgreich oder abgebrochen)."""
+        self.start_btn.setEnabled(True)
+        self.stop_btn.setEnabled(False)
+        self.progress_bar.setValue(100)
+
+        summary = f"\n✅ Suche abgeschlossen in {seconds:.2f} Sekunden mit {threads} Threads.\n"
+        summary += f"   Gefundene Treffer: {len(self.results)}\n"
+        self.result_text.append(summary)
+        self.statusBar().showMessage(f"Fertig — {len(self.results)} Treffer in {seconds:.2f} Sekunden")
+
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    app.setStyle("Fusion")   # finde ich moderner als das Standard-Look
+
+    window = MainWindow()
+    window.show()
+    sys.exit(app.exec())
 
 
 
