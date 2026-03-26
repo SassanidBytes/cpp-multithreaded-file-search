@@ -39,8 +39,44 @@ class SearchWorker(QThread):
 
     def run(self):
         """Wird automatisch aufgerufen, wenn der Thread gestartet wird."""
-        # Ich hab das C++-Programm unter Windows als textsearch.exe und unter Linux als ./textsearch
+        # Ich hab das C++-Programm unter Windows als textsearch.exe 
         if os.name == "nt":
             exe_path = "textsearch.exe"
         else:
             exe_path = "./textsearch"
+
+
+
+        #--------------------------------------------------#
+        # Prüfen, ob die ausführbare Datei überhaupt da ist
+        #--------------------------------------------------#
+        
+        if not os.path.exists(exe_path):
+            self.output_received.emit(f"FEHLER: {exe_path} nicht gefunden!")
+            return
+
+        try:
+            # QProcess startet das externe Programm und liest stdout/stderr asynchron
+            self.process = QProcess()
+            self.process.readyReadStandardOutput.connect(self.handle_output)
+            self.process.readyReadStandardError.connect(self.handle_error)
+
+            # Das C++-Programm erwartet: suchwort ordner anzahl_threads
+            args = [self.word, self.folder, str(self.threads)]
+            self.process.start(exe_path, args)
+
+            # Kurz warten, ob es starten konnte
+            if not self.process.waitForStarted(5000):
+                self.output_received.emit("Fehler: Konnte das Suchprogramm nicht starten.")
+                return
+
+            # Jetzt warten, bis das Programm fertig ist (blockiert, aber der Thread ist ja separat)
+            self.process.waitForFinished(-1)
+
+        except Exception as e:
+            self.output_received.emit(f"Fehler beim Ausführen: {e}")
+
+
+
+
+
