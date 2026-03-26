@@ -123,7 +123,7 @@ int main(int argc, char* argv[])
     totalFiles = files.size();
     filesProcessed = 0;
 
-    std::cout << "Gefundene Textdateien: " << files.size() << std::endl;
+    std::cout << "gefundene Textdateien: " << files.size() << std::endl;
 
     // Threads mit der angegebenen Anzahl starten
     std::vector<std::thread> threads;
