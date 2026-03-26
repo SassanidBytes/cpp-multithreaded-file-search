@@ -76,6 +76,45 @@ class SearchWorker(QThread):
         except Exception as e:
             self.output_received.emit(f"Fehler beim Ausführen: {e}")
 
+    
+#--------------------------------------------------#
+# Ausgabe des C++-Programms wird verarbeitet
+#--------------------------------------------------#
+
+    
+    def handle_output(self):
+        """Wird jedes Mal aufgerufen, wenn das C++-Programm etwas auf stdout schreibt."""
+        data = self.process.readAllStandardOutput().data().decode('utf-8', errors='ignore')
+        for line in data.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+
+            # Mein C++-Programm gibt spezielle Marker aus, damit ich die Daten gut auseinanderhalten kann
+            if line.startswith("FOUND:"):
+                # Fundstelle – leite direkt weiter an die GUI
+                self.output_received.emit(line)
+            elif line.startswith("PROGRESS:"):
+                # Fortschrittswert zwischen 0 und 100
+                try:
+                    progress = int(line.split(":")[1].strip())
+                    self.progress_received.emit(progress)
+                except:
+                    pass
+            elif line.startswith("SEARCH_FINISHED:"):
+                # Am Ende kommt z.B. "SEARCH_FINISHED: 2.34 seconds using 8 threads"
+                try:
+                    parts = line.split(":")[1].strip().split(" seconds using ")
+                    seconds = float(parts[0])
+                    used_threads = int(parts[1].split()[0])
+                    self.finished_signal.emit(seconds, used_threads)
+                except:
+                    # Falls das Parsen schiefgeht, zeig die Zeile einfach als normale Ausgabe
+                    self.output_received.emit(line)
+            else:
+                # Alles andere (z.B. Debug-Ausgaben) zeig ich auch an
+                self.output_received.emit(line)
+
 
 
 
