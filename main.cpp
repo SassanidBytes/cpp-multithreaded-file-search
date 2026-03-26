@@ -4,8 +4,7 @@
 #include <vector>
 #include <thread>
 #include <mutex>
-// auf c++17 gesetzt 
-#include <string>
+#include <string>  // für std::string und std::getline
 
 namespace fs = std::filesystem;
 std::mutex coutMutex;
