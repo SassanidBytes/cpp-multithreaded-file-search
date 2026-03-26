@@ -217,6 +217,7 @@ class SearchWorker(QThread):
                 margin: 0.5px;
             }
         """)
+    
 
 
 
