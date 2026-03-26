@@ -18,4 +18,4 @@ Einfach in der Konsole folgenden Befehl eingeben:
 ```bash
 g++ -std=c++17 -pthread main.cpp -o dateisuche
 
-<img width="996" height="691" alt="image" src="https://github.com/user-attachments/assets/c527d5f1-0fe4-4219-a336-9c4625803073" />
+
