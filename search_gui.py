@@ -141,6 +141,83 @@ class SearchWorker(QThread):
 
             self.init_ui()
 
+        def init_ui(self):
+        """Baut die komplette Oberfläche zusammen."""
+        central = QWidget()
+        self.setCentralWidget(central)
+        layout = QVBoxLayout(central)
+        layout.setSpacing(15)
+
+        # === Suchparameter als GroupBox mit FormLayout (übersichtlich) ===
+        param_group = QGroupBox("Suchparameter")
+        param_layout = QFormLayout()
+        param_layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
+
+        self.word_edit = QLineEdit()
+        self.word_edit.setPlaceholderText("z.B. TODO oder Fehlerbehandlung")
+        self.word_edit.returnPressed.connect(self.start_search)  # Enter startet sofort
+
+        self.folder_edit = QLineEdit()
+        self.folder_edit.setPlaceholderText("Ordner zum Durchsuchen...")
+        self.folder_edit.setReadOnly(True)   # Benutzer soll nur über den Button auswählen
+
+        browse_btn = QPushButton("Durchsuchen...")
+        browse_btn.clicked.connect(self.browse_folder)
+
+        folder_layout = QHBoxLayout()
+        folder_layout.addWidget(self.folder_edit)
+        folder_layout.addWidget(browse_btn)
+
+        self.threads_spin = QSpinBox()
+        self.threads_spin.setRange(1, 32)
+        self.threads_spin.setValue(8)           # Standardwert
+        self.threads_spin.setSuffix(" Threads")
+
+        param_layout.addRow("Suchbegriff:", self.word_edit)
+        param_layout.addRow("Ordner:", folder_layout)
+        param_layout.addRow("Threads:", self.threads_spin)
+
+        param_group.setLayout(param_layout)
+        layout.addWidget(param_group)
+
+
+        #--------------------------------------------------#
+        # === Buttons zum Starten/Abbrechen ===
+        #--------------------------------------------------#
+
+
+        btn_layout = QHBoxLayout()
+        self.start_btn = QPushButton("Suche starten")
+        self.start_btn.setStyleSheet("font-weight: bold; padding: 8px;")
+        self.start_btn.clicked.connect(self.start_search)
+
+        self.stop_btn = QPushButton("Suche abbrechen")
+        self.stop_btn.setEnabled(False)   # am Anfang deaktiviert
+        self.stop_btn.clicked.connect(self.stop_search)
+
+        btn_layout.addWidget(self.start_btn)
+        btn_layout.addWidget(self.stop_btn)
+        layout.addLayout(btn_layout)
+
+        # === Fortschrittsbalken ===
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setValue(0)
+        self.progress_bar.setTextVisible(True)
+
+        # FIX: Farbe des Fortschrittsbalkens auch bei inaktivem Fenster beibehalten
+        self.progress_bar.setStyleSheet("""
+            QProgressBar {
+                border: 1px solid grey;
+                border-radius: 3px;
+                text-align: center;
+            }
+            QProgressBar::chunk {
+                background-color: #3daee9;
+                width: 10px;
+                margin: 0.5px;
+            }
+        """)
+
 
 
 
